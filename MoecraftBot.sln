@@ -8,6 +8,7 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{9F534B19-2B8C-4DD2-954B-A627F26B8CAF}"
 	ProjectSection(SolutionItems) = preProject
 		.gitignore = .gitignore
+		mcbot.service = mcbot.service
 		README.md = README.md
 	EndProjectSection
 EndProject
