@@ -3,7 +3,7 @@
     "outDir": "bin",
     "module": "esnext",
     "target": "es2015",
-    "lib": ["dom", "es2015", "es2017"],
+    "lib": ["dom", "es2017"],
     "sourceMap": true,
     "allowJs": true,
     "moduleResolution": "node",
@@ -21,6 +21,6 @@
   "files": ["app.ts"],
   "exclude": [
     "node_modules",
-    "out"
+    "bin"
   ]
 }
