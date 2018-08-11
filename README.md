@@ -1,11 +1,12 @@
 # MoeCraft Bot
-## ±àÒë
-ÇëÊ¹ÓÃ Visual Studio 2017
-## ²¿Êğ
+## ç¼–è¯‘
+è¯·ä½¿ç”¨ Visual Studio 2017
+## éƒ¨ç½²
 ```shell
+useradd -s /usr/sbin/nologin bot
 npm install
 ```
-## ÔËĞĞ
+## è¿è¡Œ
 ```shell
-node app.js
+sudo -u bot node app.js
 ```

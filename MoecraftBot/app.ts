@@ -170,6 +170,21 @@ console.log("MoeCraft Bot (Node) v1.0 Written by Kenvix");
         }
     });
 
+    bot.command('help', async (ctx) => {
+        let helpmsg = "通用MoeCraft认证管理工具 (MoeCraft Bot)"
+            + "\n" + "作者：Kenvix [ https://kenvix.com ]"
+            + "\n" + "========================"
+            + "\n" + "/status  查看 MoeCraft 认证管理 状态"
+            + "\n" + "/enable  在本群组启用 MoeCraft 认证管理"
+            + "\n" + "/disable 在本群组停用 MoeCraft 认证管理"
+            + "\n" + "/help    查看帮助"
+            + "\n" + "/start   开始认证会话(仅限私聊)"
+            + "\n" + "/back    回退认证会话(仅限私聊)"
+            + "\n" + "/cancel  终止认证会话(仅限私聊)"
+            + "\n" + "/session 输出会话信息"
+        ctx.reply(helpmsg);
+    });
+
     bot.command('enable', async (ctx) => {
         try {
             let ChatAdmins = ctx.getChatAdministrators();
@@ -206,6 +221,13 @@ console.log("MoeCraft Bot (Node) v1.0 Written by Kenvix");
         }
     });
 
+    bot.command('status', async (ctx) => {
+        if (typeof (Groups[ctx.chat.id]) != "undefined" && Groups[ctx.chat.id].enabled)
+            ctx.reply("+ 已对群组 " + ctx.chat.id + " 启用 MoeCraftBot");
+        else
+            ctx.reply("- 未对群组 " + ctx.chat.id + " 启用 MoeCraftBot");
+    });
+
     bot.on('edited_message', async (ctx) => {
         if (ctx.chat.type == ChatType.Private) {
             let editMessage = ctx.editedMessage;
@@ -216,6 +238,7 @@ console.log("MoeCraft Bot (Node) v1.0 Written by Kenvix");
                     ctx.reply("编辑用户名成功，接下来，请输入您的密码：");
                     break;
                 case UserStatus.Done:
+                    
                     ctx.reply("您已完成认证，直接点击之前给出的链接即可加入群组。若要重新认证，请输入 /start");
                     break;
             }
@@ -227,9 +250,8 @@ console.log("MoeCraft Bot (Node) v1.0 Written by Kenvix");
             ctx.message.new_chat_members.forEach((value, key) => {
                 if (!commander.bots && value.is_bot) return;
                 if (typeof (AuthSession[value.id]) == "undefined" || AuthSession[value.id].status != UserStatus.Done) {
-                    try {
-                        telegram.kickChatMember(ctx.chat.id, value.id);
-                    } catch { }
+                    telegram.kickChatMember(ctx.chat.id, value.id)
+                        .catch((error) => { ctx.reply("踢出未认证用户失败：" + error.message); });
                 } else {
                     ctx.reply("欢迎 " + AuthSession[value.id].data.name + " [ " + value.first_name + " ] 加入 MoeCraft Group!");
                 }
@@ -247,7 +269,7 @@ console.log("MoeCraft Bot (Node) v1.0 Written by Kenvix");
                 case UserStatus.WaitingUsername:
                     session.data.email = msg;
                     session.status = UserStatus.WaitingPassword;
-                    ctx.reply("接下来，请输入您的密码：\n若输入错误，直接您发送的编辑那条消息即可");
+                    ctx.reply("接下来，请输入您的密码：\n若刚才的用户名输入错误，直接您发送的编辑那条消息即可");
                     break;
                 case UserStatus.WaitingPassword:
                     DoAuth(ctx, ctx.message, session);
@@ -282,6 +304,10 @@ console.log("MoeCraft Bot (Node) v1.0 Written by Kenvix");
                         session.status = UserStatus.Done;
                         session.data.uid = data.uid;
                         session.data.name = data.name;
+                        for (let key in Groups) {
+                            telegram.unbanChatMember(key, ctxmsg.from.id)
+                                .catch((error) => { });
+                        }
                         ctx.reply("认证成功: 欢迎回来，" + data.name + "\n感谢您加入 MoeCraft，以下是 MoeCraft Group 邀请链接：\n" + cfg.api.group + "\n本次会话结束后链接失效。为了确保安全，请在入群后删除本次会话");
                         return;
                     }
@@ -295,13 +321,15 @@ console.log("MoeCraft Bot (Node) v1.0 Written by Kenvix");
     }
 
     fs.exists(dir + 'groups.json', (exists) => {
-        fs.readFile(dir + 'groups.json', 'utf8', (err, data) => {
-            if (err) {
-                console.warn("<!> Failed to load groups: groups.json");
-                console.warn(err);
-            }
-            Groups = JSON.parse(data);
-        });
+        if (exists) {
+            fs.readFile(dir + 'groups.json', 'utf8', (err, data) => {
+                if (err) {
+                    console.warn("<!> Failed to load groups: groups.json");
+                    console.warn(err);
+                }
+                Groups = JSON.parse(data);
+            });
+        }
     });
 
     if (Agent == null)

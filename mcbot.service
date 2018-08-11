@@ -1,2 +1,18 @@
 #MoeCraft Bot Systemd service
 #Written by Kenvix
+[Unit]
+Description=Kenvix MoeCraft Bot Service
+Wants=network.target local_fs.target remote_fs.target network-online.target
+After=network.target local_fs.target remote_fs.target network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/sudo -u bot /usr/bin/node /home/bot/app.js
+PrivateTmp=true
+RestartSec=1min
+Restart=on-failure
+ExecStop=/usr/kill -INT $MAINPID
+
+[Install]
+WantedBy=multi-user.target
+ 
