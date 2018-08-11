@@ -1,0 +1,7 @@
+MoecraftBot/node_modules
+MoecraftBot/*.d.ts
+MoecraftBot/*.js
+MoecraftBot/*.js.map
+MoecraftBot/package-lock.json
+MoecraftBot/bin
+MoecraftBot/obj

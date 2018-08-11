@@ -1,0 +1,9 @@
+﻿{
+  "api": {
+    "url": "https://accounts.moecraft.net/?s=API/User/authTest",
+    "group": ""
+  },
+  "tg": {
+    "key": "640119204:AAGdg780AmPnTBJaZ2_B2g2WxOzEFvFjYHI"
+  }
+}

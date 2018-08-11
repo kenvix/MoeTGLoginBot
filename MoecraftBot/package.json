@@ -1,0 +1,16 @@
+{
+  "name": "moecraft-bot",
+  "version": "0.0.0",
+  "description": "MoecraftBot",
+  "main": "app.js",
+  "author": {
+    "name": "Kenvix"
+  },
+  "devDependencies": {
+    "@types/node": "^6.0.87"
+  },
+  "dependencies": {
+    "config.json": "0.0.4",
+    "telegraf": "^3.22.2"
+  }
+}
