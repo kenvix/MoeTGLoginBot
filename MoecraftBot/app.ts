@@ -7,11 +7,13 @@ import path = require("path");
 import superagent = require("superagent");
 import querystring = require('querystring');
 import commander = require("commander");
-import { IncomingMessage } from "telegraf/typings/telegram-types";
+import { IncomingMessage, ChatMember } from "telegraf/typings/telegram-types";
 import Telegram = require('telegraf/telegram');
+import { fail } from "assert";
 
 commander.version('1.0.0')
     .option('-x, --debug', 'Enable debug functions')
+    .option('-b, --bots', 'Also check bots')
     .parse(process.argv);
 
 console.log("MoeCraft Bot (Node) v1.0 Written by Kenvix");
@@ -27,6 +29,14 @@ if (typeof (cfg.tg) == "undefined" || cfg.tg.key.length < 1)
 
 function isDebugMode(): boolean {
     return commander.debug;
+}
+
+async function isAdmin(members: Promise<ChatMember[]>, id: number): Promise<boolean> {
+    let MembersArray = await members;
+    for (var i = 0; i < MembersArray.length; i++) {
+        if (MembersArray[i].user.id == id) return true;
+    }
+    return false;
 }
 
 enum UserStatus {
@@ -46,6 +56,8 @@ enum ChatType {
 interface IAuthData {
     "email": string
     "password": string
+    "uid"?: number
+    "name"?: string
 }
 
 interface IAuthSession {
@@ -53,6 +65,14 @@ interface IAuthSession {
         "name": string //Telegram Name
         "status": UserStatus,
         "data": IAuthData
+    };
+}
+
+
+interface IGroups {
+    [index: number]: { //Telegram Chat ID
+        "enabled": boolean
+        "operator": number //Operator Telegram ID
     };
 }
 
@@ -84,8 +104,15 @@ const telegram = new Telegram(cfg.tg.key, {
     agent: Agent
 });
 let AuthSession: IAuthSession = {};
+let Groups: IGroups = {}
 
-bot.command('start', (ctx) => {
+function SaveGroups() {
+    fs.writeFile(dir + 'groups.json', JSON.stringify(Groups), (err) => {
+        if (err) throw err;
+    });
+}
+
+bot.command('start', async (ctx) => {
     if (ctx.chat.type == ChatType.Private) {
         ctx.reply("欢迎使用 MoeCraft Telegram 认证管理工具\n请输入您的 MoeCraft 用户中心的用户名或邮箱")
         AuthSession[ctx.message.from.id] = {
@@ -99,7 +126,7 @@ bot.command('start', (ctx) => {
     }
 });
 
-bot.command('session', (ctx) => {
+bot.command('session', async (ctx) => {
     ctx.reply("User ID: " + ctx.message.from.id + "\nChat ID: " + ctx.chat.id + "\n" + "User Name: " + ctx.message.from.username);
     if (ctx.chat.type == ChatType.Private) {
         if (typeof (ctx.message.from.id) == "undefined" || typeof (AuthSession[ctx.message.from.id]) == "undefined" || AuthSession[ctx.message.from.id].status == UserStatus.Idle)
@@ -109,18 +136,20 @@ bot.command('session', (ctx) => {
     }
 });
 
-bot.command('dump', (ctx) => {
+bot.command('dump', async (ctx) => {
     if (!isDebugMode()) return;
+    ctx.reply("AuthSession:\n" + JSON.stringify(AuthSession));
+    ctx.reply("Groups:\n" + JSON.stringify(Groups));
 });
 
-bot.command('cancel', (ctx) => {
+bot.command('cancel', async (ctx) => {
     if (ctx.chat.type == ChatType.Private) {
         AuthSession[ctx.message.from.id] = undefined;
         ctx.reply("会话已结束，若要重新开始认证，请输入 /start");
     }
 });
 
-bot.command('back', (ctx) => {
+bot.command('back', async (ctx) => {
     if (ctx.chat.type == ChatType.Private) {
         if (typeof (ctx.message.from.id) == "undefined" || typeof (AuthSession[ctx.message.from.id]) == "undefined" || AuthSession[ctx.message.from.id].status == UserStatus.Idle) {
             ctx.reply("会话尚未开始，不能回退");
@@ -139,7 +168,43 @@ bot.command('back', (ctx) => {
     }
 });
 
-bot.on('edited_message', (ctx) => {
+bot.command('enable', async (ctx) => {
+    try {
+        let ChatAdmins = ctx.getChatAdministrators();
+        if (ctx.chat.all_members_are_administrators || await isAdmin(ChatAdmins, ctx.from.id)) {
+            Groups[ctx.chat.id] = {
+                "enabled": true,
+                "operator": ctx.from.id
+            }
+            SaveGroups();
+            ctx.reply("已对群组 " + ctx.chat.id + " 启用 MoeCraftBot");
+        } else {
+            throw new Error("操作者必须是管理员");
+        }
+    } catch (ex) {
+        ctx.reply("启用失败：" + ex.name + ":" + ex.message);
+    }
+});
+
+bot.command('disable', async (ctx) => {
+    try {
+        let ChatAdmins = ctx.getChatAdministrators();
+        if (ctx.chat.all_members_are_administrators || isAdmin(ChatAdmins, ctx.from.id)) {
+            Groups[ctx.chat.id] = {
+                "enabled": false,
+                "operator": ctx.from.id
+            }
+            SaveGroups();
+            ctx.reply("已对群组 " + ctx.chat.id + " 禁用 MoeCraftBot");
+        } else {
+            throw new Error("操作者必须是管理员");
+        }
+    } catch (ex) {
+        ctx.reply("禁用失败：" + ex.name + ":" + ex.message);
+    }
+});
+
+bot.on('edited_message', async (ctx) => {
     if (ctx.chat.type == ChatType.Private) {
         let editMessage = ctx.editedMessage;
         if (typeof (editMessage.from.id) == "undefined" || typeof (AuthSession[editMessage.from.id]) == "undefined" || AuthSession[editMessage.from.id].status == UserStatus.Idle) return;
@@ -155,18 +220,22 @@ bot.on('edited_message', (ctx) => {
     }
 });
 
-bot.on('new_chat_members', (ctx) => {
-    ctx.message.new_chat_members.forEach((value, key) => {
-        if (value.is_bot) return;
-        if (typeof (AuthSession[value.id]) == "undefined" || AuthSession[ctx.message.from.id].status != UserStatus.Done) {
-            try {
-                
-            } catch {}
-        }
-    });
+bot.on('new_chat_members', async (ctx) => {
+    if (typeof (Groups[ctx.chat.id]) == "undefined" || Groups[ctx.chat.id].enabled) {
+        ctx.message.new_chat_members.forEach((value, key) => {
+            if (!commander.bots && value.is_bot) return;
+            if (typeof (AuthSession[value.id]) == "undefined" || AuthSession[value.id].status != UserStatus.Done) {
+                try {
+                    telegram.kickChatMember(ctx.chat.id, value.id);
+                } catch { }
+            } else {
+                ctx.reply("欢迎 " + AuthSession[value.id].data.name + " [ " + value.first_name + " ] 加入 MoeCraft Group!");
+            }
+        });
+    }
 });
 
-bot.on('message', (ctx) => {
+bot.on('message', async (ctx) => {
     if (ctx.chat.type == ChatType.Private) {
         if (typeof (ctx.message.from.id) == "undefined" || typeof (AuthSession[ctx.message.from.id]) == "undefined" || AuthSession[ctx.message.from.id].status == UserStatus.Idle)
             return;
@@ -208,7 +277,9 @@ function DoAuth(ctx: ContextMessageUpdate, ctxmsg: IncomingMessage, session) {
                     return;
                 }
                 if (typeof (data.uid) != "undefined" && data.uid > 0) {
-                    AuthSession[ctxmsg.from.id].status = UserStatus.Done;
+                    session.status = UserStatus.Done;
+                    session.data.uid = data.uid;
+                    session.data.name = data.name;
                     ctx.reply("认证成功: 欢迎回来，" + data.name + "\n感谢您加入 MoeCraft，以下是 MoeCraft Group 邀请链接：\n" + cfg.api.group + "\n本次会话结束后链接失效。为了确保安全，请在入群后删除本次会话");
                     return;
                 }
@@ -216,9 +287,19 @@ function DoAuth(ctx: ContextMessageUpdate, ctxmsg: IncomingMessage, session) {
             });
     } catch (ex) {
         ctx.reply("认证出错：" + ex.name + ":" + ex.message);
-        console.log("<!> Failed to authorize user: " + session.name);
-        console.log(ex);
+        console.warn("<!> Failed to authorize user: " + session.name);
+        console.warn(ex);
     }
+}
+
+if (fs.exists(dir + 'groups.json')) {
+    fs.readFile(dir + 'groups.json', 'utf8', (err, data) => {
+        if (err) {
+            console.warn("<!> Failed to load groups: groups.json");
+            console.warn(err);
+        }
+        Groups = JSON.parse(data);
+    });
 }
 
 if (Agent == null)

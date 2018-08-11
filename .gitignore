@@ -5,3 +5,4 @@ MoecraftBot/*.js.map
 MoecraftBot/package-lock.json
 MoecraftBot/bin
 MoecraftBot/obj
+MoecraftBot/groups.json
