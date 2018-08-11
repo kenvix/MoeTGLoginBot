@@ -1,0 +1,26 @@
+{
+  "compilerOptions": {
+    "outDir": "bin",
+    "module": "esnext",
+    "target": "es2015",
+    "lib": ["dom", "es2015", "es2017"],
+    "sourceMap": true,
+    "allowJs": true,
+    "moduleResolution": "node",
+    "rootDir": ".",
+    "forceConsistentCasingInFileNames": true,
+    "noImplicitReturns": true,
+    "noImplicitThis": true,
+    "noImplicitAny": true,
+    "strictNullChecks": true,
+    "suppressImplicitAnyIndexErrors": true,
+    "noUnusedLocals": false,
+    "allowUnreachableCode": true,
+    "allowSyntheticDefaultImports": true
+  },
+  "files": ["app.ts"],
+  "exclude": [
+    "node_modules",
+    "out"
+  ]
+}
