@@ -4,6 +4,7 @@
     "group": "https://t.me/joinchat/FwB1AEHx0Ja37v2oXNpfjA"
   },
   "tg": {
+    "name": "MoeCraftBot",
     "key": "640119204:AAGdg780AmPnTBJaZ2_B2g2WxOzEFvFjYHI",
     "proxy": {
       "type": "socks5",

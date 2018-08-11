@@ -98,6 +98,7 @@ console.log("MoeCraft Bot (Node) v1.0 Written by Kenvix");
     }
 
     const bot = new Telegraf(cfg.tg.key, {
+        username: cfg.tg.name,
         telegram: {           // Telegram options
             agent: Agent        // https.Agent instance, allows custom proxy, certificate, keep alive, etc.
         }
@@ -184,7 +185,7 @@ console.log("MoeCraft Bot (Node) v1.0 Written by Kenvix");
             + "\n" + "/session 输出会话信息"
         ctx.reply(helpmsg);
     });
-
+    
     bot.command('enable', async (ctx) => {
         try {
             let ChatAdmins = ctx.getChatAdministrators();
