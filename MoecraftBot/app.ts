@@ -5,6 +5,12 @@ import Telegraf from "telegraf"
 import process = require("process");
 import path = require("path");
 import superagent = require("superagent");
+import querystring = require('querystring');
+import commander = require("commander");
+
+commander.version('1.0.0')
+    .option('-x, --debug', 'Enable debug functions')
+    .parse(process.argv);
 
 console.log("MoeCraft Bot (Node) v1.0 Written by Kenvix");
 
@@ -16,6 +22,10 @@ if (typeof (cfg) == "undefined")
 
 if (typeof (cfg.tg) == "undefined" || cfg.tg.key.length < 1)
     throw new Error("Telegram key undefined or config unreadable");
+
+function isDebugMode(): boolean {
+    return commander.debug;
+}
 
 enum UserStatus {
     Idle,
@@ -60,6 +70,10 @@ bot.command('session', (ctx) => {
         ctx.reply("Session status: " + AuthSession[ctx.chat.id].status.toString());
 });
 
+bot.command('dump', (ctx) => {
+    if (!isDebugMode()) return;
+});
+
 bot.command('cancel', (ctx) => {
     AuthSession[ctx.chat.id] = undefined;
     ctx.reply("会话已结束，若要重新开始认证，请输入 /start");
@@ -99,14 +113,28 @@ bot.on('message', (ctx) => {
             try {
                 superagent
                     .post(cfg.api.url)
-                    .send({
+                    .send(querystring.stringify({
                         login: session.data.email,
                         password: session.data.password
-                    })
+                    }))
                     .set('Useragent', 'MoeCraft Bot')
                     .end((err, res) => {
                         if (err) throw err;
-                        console.log(res);
+                        if (typeof (res) == "undefined" || res.text.length < 1)
+                            throw new Error("接收认证服务器返回数据失败");
+                        let data = JSON.parse(res.text);
+                        if (typeof (res) == "undefined" || !res)
+                            throw new Error("解析认证服务器返回数据失败");
+                        if (data.status != 0) {
+                            ctx.reply("错误：" + data.info);
+                            return;
+                        }
+                        if (typeof (data.uid) != "undefined" && data.uid > 0) {
+                            AuthSession[ctx.chat.id].status = UserStatus.Done;
+                            ctx.reply("认证成功: 欢迎回来，" + data.name + "\n感谢您加入 MoeCraft，以下是 MoeCraft Group 邀请链接：\n" + cfg.api.group + "\n本次会话结束后链接失效。为了确保安全，请在入群后删除本次会话");
+                            return;
+                        }
+                        throw new Error("未知错误");
                     });
             } catch (ex) {
                 ctx.reply("认证出错：" + ex.name + ":" + ex.message);
