@@ -60,6 +60,7 @@
     <TypeScriptSourceRoot />
   </PropertyGroup>
   <ItemGroup>
+    <Content Include="tsconfig.json" />
     <TypeScriptCompile Include="app.ts" />
     <AdditionalFiles Include="config.json">
       <SubType>Code</SubType>

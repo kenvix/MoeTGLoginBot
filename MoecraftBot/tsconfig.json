@@ -3,7 +3,7 @@
     "outDir": "bin",
     "module": "esnext",
     "target": "es2015",
-    "lib": ["dom", "es2017"],
+    "lib": [ "dom", "es2017" ],
     "sourceMap": true,
     "allowJs": true,
     "moduleResolution": "node",
@@ -16,7 +16,8 @@
     "suppressImplicitAnyIndexErrors": true,
     "noUnusedLocals": false,
     "allowUnreachableCode": true,
-    "allowSyntheticDefaultImports": true
+    "allowSyntheticDefaultImports": true,
+    "typeRoots": [ "./node_modules/@types" ]
   },
   "files": ["app.ts"],
   "exclude": [
